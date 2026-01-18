@@ -34,87 +34,94 @@ class LogModel {
 	}
 
 	/**
-	 * Insert a new log or increment occurrences if it exists.
+	 * Upsert log (Insert or Update if exists).
 	 *
-	 * @param array $data Log data.
-	 * @return array Result with is_new flag and log_id.
+	 * @param array $data Log data with pre-calculated hash.
+	 * @return array Result with log_id and is_new flag.
 	 */
-	public function insert_or_increment( $data ) {
+	public function upsert( $data ) {
 		global $wpdb;
-		$table   = $this->get_table();
-		$message = sanitize_text_field( $data['message'] );
-		$file    = sanitize_text_field( $data['file'] ?? '' );
-		$line    = absint( $data['line'] ?? 0 );
-		$type    = sanitize_text_field( $data['type'] );
 
-		// Create a unique hash for each distinct error.
-		// NOTE: We hash the encrypted message if passed, or plain?
-		// To match previous logic, we hash specific fields.
-		// However, message is encrypted passed in. Ideally we hash the RAW params before encryption?
-		// But here we receive potentially encrypted data.
-		// Let's assume the LoggerService generates the hash or we rely on message being unique.
-		// Wait, if message is encrypted with random IV, it will be different every time!
-		// So we CANNOT use encrypted message for the hash.
-		// Solution: Hash MUST be passed in or generated from raw data BEFORE encryption.
-		// Let's accept 'error_hash' in $data.
-		
-		if ( empty( $data['error_hash'] ) ) {
-			// Fallback (unsafe if message is encrypted).
-			$hash = hash( 'sha256', "{$type}|{$message}|{$file}|{$line}" );
-		} else {
-			$hash = $data['error_hash'];
-		}
+		// Sanitize input
+		$error_hash = sanitize_key( $data['error_hash'] );
+		$table      = $this->get_table();
 
-		// Try to increment an existing log entry.
-		$updated = $wpdb->query(
-			$wpdb->prepare(
-				"UPDATE {$table} 
-			 SET occurrences = occurrences + 1, last_occurred = %s, resolved = 0
-			 WHERE error_hash = %s",
-				current_time( 'mysql' ),
-				$hash
-			)
-		);
+		// Try to update occurrence first
+		$updated = $this->increment_occurrence( $error_hash, $table );
 
-		// If no row was updated, insert a new one.
-		if ( ! $updated ) {
-			$result = $wpdb->insert( $table, array(
-				'error_hash'    => $hash,
-				'type'          => $type,
-				'message'       => $message,
-				'file'          => $file,
-				'line'          => $line,
-				'occurrences'   => 1,
-				'created_at'    => current_time( 'mysql' ),
-				'last_occurred' => current_time( 'mysql' ),
-			) );
-
-			$log_id = $wpdb->insert_id;
-			
-			// Trigger custom hook for extensibility
-			if ( $log_id ) {
-				do_action( 'infynion/log_saved', $log_id, true, $data );
-			}
-
+		if ( $updated ) {
+			// Fetch the ID of the updated row
+			$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE error_hash = %s", $error_hash ) );
 			return array(
-				'is_new' => true,
-				'log_id' => (int) $log_id,
+				'log_id' => $id,
+				'is_new' => false,
 			);
 		}
 
-		// If updated, fetch the existing log ID by hash.
-		$log_id = $wpdb->get_var(
-			$wpdb->prepare( "SELECT id FROM {$table} WHERE error_hash = %s LIMIT 1", $hash )
-		);
-		
-		if ( $log_id ) {
-			do_action( 'infynion/log_saved', $log_id, false, $data );
-		}
+		// Insert new
+		$id = $this->insert_new( $data, $table );
 
 		return array(
-			'is_new' => false,
-			'log_id' => (int) $log_id,
+			'log_id' => $id,
+			'is_new' => true,
 		);
+	}
+
+	/**
+	 * Increment occurrence for existing log.
+	 *
+	 * @param string $hash  Log hash.
+	 * @param string $table Table name.
+	 * @return bool True if updated.
+	 */
+	private function increment_occurrence( $hash, $table ) {
+		global $wpdb;
+
+		$sql = "UPDATE {$table} 
+                SET 
+                    occurrences = occurrences + 1, 
+                    last_occurred = %s,
+                    resolved = 0
+                WHERE error_hash = %s";
+		
+		$result = $wpdb->query( 
+			$wpdb->prepare( 
+				$sql, 
+				current_time( 'mysql' ), 
+				$hash 
+			) 
+		);
+
+		return $result > 0;
+	}
+
+	/**
+	 * Insert new log entry.
+	 *
+	 * @param array  $data  Log data.
+	 * @param string $table Table name.
+	 * @return int Inserted ID.
+	 */
+	private function insert_new( $data, $table ) {
+		global $wpdb;
+
+		$wpdb->insert(
+			$table,
+			array(
+				'error_hash'    => $data['error_hash'],
+				'type'          => sanitize_text_field( $data['type'] ),
+				'message'       => $data['message'], // Already encrypted string
+				'file'          => sanitize_text_field( $data['file'] ),
+				'line'          => intval( $data['line'] ),
+				'occurrences'   => 1,
+				'last_occurred' => current_time( 'mysql' ),
+				'created_at'    => current_time( 'mysql' ),
+				'resolved'      => 0,
+			),
+			array( '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%d' )
+		);
+
+		return $wpdb->insert_id;
 	}
 
 	/**

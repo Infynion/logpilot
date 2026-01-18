@@ -58,8 +58,8 @@ class LoggerService {
 			return;
 		}
 
-		// Calculate hash BEFORE encryption to ensure deduplication works.
-		// We use md5 of raw data.
+		// SRP: Logic for hash generation belongs in the Service, not the Model.
+		// We use md5 of raw data to ensure uniqueness.
 		$raw_message_str = is_scalar( $message ) ? (string) $message : wp_json_encode( $message );
 		$error_hash      = hash( 'sha256', "{$level}|{$raw_message_str}|{$file}|{$line}" );
 
@@ -74,8 +74,14 @@ class LoggerService {
 			'line'       => $line,
 		);
 
-		$result = $this->log_model->insert_or_increment( $data );
+		// Delegate DB operation to Model
+		$result = $this->log_model->upsert( $data );
 		
+		// SRP: Event triggering belongs in the Service layer, not the Data layer.
+		if ( $result['log_id'] ) {
+			do_action( 'infynion/log_saved', $result['log_id'], $result['is_new'], $data );
+		}
+
 		// Fire action for notification service
 		if ( $send_email && $result['is_new'] ) {
 			do_action( 'infynion_log_written_new', $result['log_id'], $level );

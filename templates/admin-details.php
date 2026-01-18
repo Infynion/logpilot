@@ -2,7 +2,7 @@
 /**
  * Template: Log Details View.
  *
- * @package Infynion\SystemLogger\Templates
+ * @package Infynion\LogPilot\Templates
  * @var array $log Log entry data.
  */
 
@@ -42,7 +42,7 @@ $back_url = admin_url( 'admin.php?page=logpilot-logs&tab=logs' );
 					<th scope="row"><?php esc_html_e( 'Message', 'logpilot' ); ?></th>
 					<td>
 						<?php
-						$decrypted = \Infynion\SystemLogger\Utils\Encryption::decrypt( $log['message'] );
+						$decrypted = \Infynion\LogPilot\Utils\Encryption::decrypt( $log['message'] );
 						if ( is_array( $decrypted ) || is_object( $decrypted ) ) {
 							echo '<pre>' . esc_html( wp_json_encode( $decrypted, JSON_PRETTY_PRINT ) ) . '</pre>';
 						} else {

@@ -2,17 +2,17 @@
 /**
  * Simple PSR-4 Autoloader.
  *
- * @package    Infynion\SystemLogger\Core
+ * @package    Infynion\LogPilot\Core
  */
 
-namespace Infynion\SystemLogger\Core;
+namespace Infynion\LogPilot\Core;
 
 /**
  * Class Autoloader
  *
  * Handles dynamically loading classes that adhere to PSR-4 standards.
  *
- * @package Infynion\SystemLogger\Core
+ * @package Infynion\LogPilot\Core
  */
 class Autoloader {
 

@@ -2,19 +2,19 @@
 /**
  * Cleanup Service.
  *
- * @package    Infynion\SystemLogger\Services
+ * @package    Infynion\LogPilot\Services
  */
 
-namespace Infynion\SystemLogger\Services;
+namespace Infynion\LogPilot\Services;
 
-use Infynion\SystemLogger\Models\LogModel;
+use Infynion\LogPilot\Models\LogModel;
 
 /**
  * Class CleanupService
  *
  * Handles automatic cleanup of old logs.
  *
- * @package Infynion\SystemLogger\Services
+ * @package Infynion\LogPilot\Services
  */
 class CleanupService {
 

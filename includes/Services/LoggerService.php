@@ -2,20 +2,20 @@
 /**
  * Logger Service.
  *
- * @package    Infynion\SystemLogger\Services
+ * @package    Infynion\LogPilot\Services
  */
 
-namespace Infynion\SystemLogger\Services;
+namespace Infynion\LogPilot\Services;
 
-use Infynion\SystemLogger\Models\LogModel;
-use Infynion\SystemLogger\Utils\Encryption;
+use Infynion\LogPilot\Models\LogModel;
+use Infynion\LogPilot\Utils\Encryption;
 
 /**
  * Class LoggerService
  *
  * Handles the logic of preparing log data, encryption, and interacting with the Model.
  *
- * @package Infynion\SystemLogger\Services
+ * @package Infynion\LogPilot\Services
  */
 class LoggerService {
 

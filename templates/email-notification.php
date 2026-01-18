@@ -2,7 +2,7 @@
 /**
  * Template: Email Notification.
  *
- * @package Infynion\SystemLogger\Templates
+ * @package Infynion\LogPilot\Templates
  * @var string $level Log Level.
  * @var string $site_name Site Name.
  * @var string $log_url URL to view the log.
@@ -38,7 +38,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
 		
 		<p style="font-size: 12px; color: #777;">
-			<?php printf( esc_html__( 'Sent by %s System Logger', 'logpilot' ), esc_html( $site_name ) ); ?>
+			<?php printf( esc_html__( 'Sent by %s Logpilot', 'logpilot' ), esc_html( $site_name ) ); ?>
 		</p>
 	</div>
 </body>

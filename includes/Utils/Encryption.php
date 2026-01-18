@@ -2,17 +2,17 @@
 /**
  * Encryption Utility.
  *
- * @package    Infynion\SystemLogger\Utils
+ * @package    Infynion\LogPilot\Utils
  */
 
-namespace Infynion\SystemLogger\Utils;
+namespace Infynion\LogPilot\Utils;
 
 /**
  * Class Encryption
  *
  * Handles encryption and decryption of sensitive data.
  *
- * @package Infynion\SystemLogger\Utils
+ * @package Infynion\LogPilot\Utils
  */
 class Encryption {
 

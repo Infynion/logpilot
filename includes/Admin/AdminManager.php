@@ -2,17 +2,17 @@
 /**
  * Admin Manager.
  *
- * @package    Infynion\SystemLogger\Admin
+ * @package    Infynion\LogPilot\Admin
  */
 
-namespace Infynion\SystemLogger\Admin;
+namespace Infynion\LogPilot\Admin;
 
 /**
  * Class AdminManager
  *
  * Handles the registration of admin menus, scripts, and styles.
  *
- * @package Infynion\SystemLogger\Admin
+ * @package Infynion\LogPilot\Admin
  */
 class AdminManager {
 
@@ -40,8 +40,8 @@ class AdminManager {
 	 */
 	public function add_menu_page() {
 		add_menu_page(
-			__( 'System Logs', 'logpilot' ),
-			__( 'System Logs', 'logpilot' ),
+			__( 'Logpilot Logs', 'logpilot' ),
+			__( 'Logpilot Logs', 'logpilot' ),
 			'manage_options',
 			'logpilot-logs',
 			array( $this, 'render_page' ),
@@ -91,7 +91,7 @@ class AdminManager {
 	 * @return void
 	 */
 	public function render_log_details( $log_id ) {
-		$model = new \Infynion\SystemLogger\Models\LogModel();
+		$model = new \Infynion\LogPilot\Models\LogModel();
 		$log   = $model->get_by_id( $log_id );
 
 		if ( ! $log ) {

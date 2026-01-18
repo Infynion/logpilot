@@ -10,13 +10,13 @@
  * Text Domain:       logpilot
  * Domain Path:       /languages
  *
- * @package           Infynion\SystemLogger
+ * @package           Infynion\LogPilot
  */
 
-namespace Infynion\SystemLogger;
+namespace Infynion\LogPilot;
 
-use Infynion\SystemLogger\Core\Plugin;
-use Infynion\SystemLogger\Core\Autoloader;
+use Infynion\LogPilot\Core\Plugin;
+use Infynion\LogPilot\Core\Autoloader;
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -46,7 +46,7 @@ require_once LOGPILOT_PATH . 'includes/Core/Autoloader.php';
  */
 $autoloader = new Autoloader();
 $autoloader->register();
-$autoloader->add_namespace( 'Infynion\SystemLogger', LOGPILOT_PATH . 'includes' );
+$autoloader->add_namespace( 'Infynion\LogPilot', LOGPILOT_PATH . 'includes' );
 
 /**
  * Begins execution of the plugin.

@@ -2,17 +2,17 @@
 /**
  * Log Model.
  *
- * @package    Infynion\SystemLogger\Models
+ * @package    Infynion\LogPilot\Models
  */
 
-namespace Infynion\SystemLogger\Models;
+namespace Infynion\LogPilot\Models;
 
 /**
  * Class LogModel
  *
  * Handles database operations for logs (CRUD).
  *
- * @package Infynion\SystemLogger\Models
+ * @package Infynion\LogPilot\Models
  */
 class LogModel {
 

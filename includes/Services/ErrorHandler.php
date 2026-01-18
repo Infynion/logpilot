@@ -2,17 +2,17 @@
 /**
  * Error Handler Service.
  *
- * @package    Infynion\SystemLogger\Services
+ * @package    Infynion\LogPilot\Services
  */
 
-namespace Infynion\SystemLogger\Services;
+namespace Infynion\LogPilot\Services;
 
 /**
  * Class ErrorHandler
  *
  * Registers global PHP error, exception, and shutdown handlers.
  *
- * @package Infynion\SystemLogger\Services
+ * @package Infynion\LogPilot\Services
  */
 class ErrorHandler {
 

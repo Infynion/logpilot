@@ -2,17 +2,17 @@
 /**
  * Database Service.
  *
- * @package    Infynion\SystemLogger\Services
+ * @package    Infynion\LogPilot\Services
  */
 
-namespace Infynion\SystemLogger\Services;
+namespace Infynion\LogPilot\Services;
 
 /**
  * Class DatabaseService
  *
  * Handles database schema creation and updates.
  *
- * @package Infynion\SystemLogger\Services
+ * @package Infynion\LogPilot\Services
  */
 class DatabaseService {
 

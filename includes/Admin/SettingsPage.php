@@ -2,17 +2,17 @@
 /**
  * Settings Page.
  *
- * @package    Infynion\SystemLogger\Admin
+ * @package    Infynion\LogPilot\Admin
  */
 
-namespace Infynion\SystemLogger\Admin;
+namespace Infynion\LogPilot\Admin;
 
 /**
  * Class SettingsPage
  *
  * Handles registration and rendering of the settings options.
  *
- * @package Infynion\SystemLogger\Admin
+ * @package Infynion\LogPilot\Admin
  */
 class SettingsPage {
 

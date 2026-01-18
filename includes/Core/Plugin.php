@@ -2,10 +2,10 @@
 /**
  * Main Plugin Class.
  *
- * @package    Infynion\SystemLogger\Core
+ * @package    Infynion\LogPilot\Core
  */
 
-namespace Infynion\SystemLogger\Core;
+namespace Infynion\LogPilot\Core;
 
 /**
  * Class Plugin
@@ -14,7 +14,7 @@ namespace Infynion\SystemLogger\Core;
  * loads dependencies, and sets the hooks for the admin area and
  * the public-facing side of the site.
  *
- * @package Infynion\SystemLogger\Core
+ * @package Infynion\LogPilot\Core
  */
 class Plugin {
 
@@ -75,12 +75,12 @@ class Plugin {
 	 */
 	private function init_services() {
 		$services = [
-			\Infynion\SystemLogger\Services\DatabaseService::class,
-			\Infynion\SystemLogger\Services\LoggerService::class,
-			\Infynion\SystemLogger\Services\ErrorHandler::class,
-			\Infynion\SystemLogger\Services\NotificationService::class,
-			\Infynion\SystemLogger\Services\CleanupService::class,
-			\Infynion\SystemLogger\Admin\AdminManager::class,
+			\Infynion\LogPilot\Services\DatabaseService::class,
+			\Infynion\LogPilot\Services\LoggerService::class,
+			\Infynion\LogPilot\Services\ErrorHandler::class,
+			\Infynion\LogPilot\Services\NotificationService::class,
+			\Infynion\LogPilot\Services\CleanupService::class,
+			\Infynion\LogPilot\Admin\AdminManager::class,
 		];
 
 		foreach ( $services as $service_class ) {

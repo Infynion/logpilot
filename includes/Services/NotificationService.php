@@ -2,19 +2,19 @@
 /**
  * Notification Service.
  *
- * @package    Infynion\SystemLogger\Services
+ * @package    Infynion\LogPilot\Services
  */
 
-namespace Infynion\SystemLogger\Services;
+namespace Infynion\LogPilot\Services;
 
-use Infynion\SystemLogger\Models\LogModel;
+use Infynion\LogPilot\Models\LogModel;
 
 /**
  * Class NotificationService
  *
  * Handles sending email notifications for system logs.
  *
- * @package Infynion\SystemLogger\Services
+ * @package Infynion\LogPilot\Services
  */
 class NotificationService {
 
@@ -107,7 +107,7 @@ class NotificationService {
 		$url     = admin_url( 'admin.php?page=logpilot-logs' );
 
 		$message  = '<p>Hello Admin,</p>';
-		$message .= '<p>This is your weekly reminder to check the System Logs.</p>';
+		$message .= '<p>This is your weekly reminder to check the Logpilot Logs.</p>';
 		$message .= sprintf( '<p><a href="%s">View All Logs</a></p>', esc_url( $url ) );
 
 		$this->send_email( $to, $subject, $message );

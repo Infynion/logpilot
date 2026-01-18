@@ -2,19 +2,19 @@
 /**
  * Fired during plugin activation.
  *
- * @package    Infynion\SystemLogger\Core
+ * @package    Infynion\LogPilot\Core
  */
 
-namespace Infynion\SystemLogger\Core;
+namespace Infynion\LogPilot\Core;
 
-use Infynion\SystemLogger\Services\DatabaseService;
+use Infynion\LogPilot\Services\DatabaseService;
 
 /**
  * Class Activator
  *
  * This class defines all code necessary to run during the plugin's activation.
  *
- * @package Infynion\SystemLogger\Core
+ * @package Infynion\LogPilot\Core
  */
 class Activator {
 

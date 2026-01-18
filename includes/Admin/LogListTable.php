@@ -2,13 +2,13 @@
 /**
  * Log List Table.
  *
- * @package    Infynion\SystemLogger\Admin
+ * @package    Infynion\LogPilot\Admin
  */
 
-namespace Infynion\SystemLogger\Admin;
+namespace Infynion\LogPilot\Admin;
 
-use Infynion\SystemLogger\Models\LogModel;
-use Infynion\SystemLogger\Utils\Encryption;
+use Infynion\LogPilot\Models\LogModel;
+use Infynion\LogPilot\Utils\Encryption;
 
 if ( ! class_exists( 'WP_List_Table' ) ) {
 	require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
@@ -19,7 +19,7 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
  *
  * Renders the log list using WP_List_Table.
  *
- * @package Infynion\SystemLogger\Admin
+ * @package Infynion\LogPilot\Admin
  */
 class LogListTable extends \WP_List_Table {
 

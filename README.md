@@ -16,12 +16,12 @@
 
 1.  Upload the `logpilot` directory to the `/wp-content/plugins/` directory.
 2.  Activate the plugin through the 'Plugins' menu in WordPress.
-3.  Go to **System Logs** > **Settings** to configure your preferences (enable logging, email notifications, retention period).
+3.  Go to **Logpilot Logs** > **Settings** to configure your preferences (enable logging, email notifications, retention period).
 
 ## Usage
 
 ### Viewing Logs
-Navigate to **System Logs** in your WordPress admin dashboard. You will see a list of all captured errors. Click "View Details" on any log entry to see the full stack trace and details.
+Navigate to **Logpilot Logs** in your WordPress admin dashboard. You will see a list of all captured errors. Click "View Details" on any log entry to see the full stack trace and details.
 
 ### Custom Logging
 You can use the `logpilot` hook to save your own custom logs from other plugins or themes:

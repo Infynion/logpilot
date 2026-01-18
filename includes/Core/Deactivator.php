@@ -2,17 +2,17 @@
 /**
  * Fired during plugin deactivation.
  *
- * @package    Infynion\SystemLogger\Core
+ * @package    Infynion\LogPilot\Core
  */
 
-namespace Infynion\SystemLogger\Core;
+namespace Infynion\LogPilot\Core;
 
 /**
  * Class Deactivator
  *
  * This class defines all code necessary to run during the plugin's deactivation.
  *
- * @package Infynion\SystemLogger\Core
+ * @package Infynion\LogPilot\Core
  */
 class Deactivator {
 

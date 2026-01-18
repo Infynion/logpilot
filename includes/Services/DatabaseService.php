@@ -39,9 +39,9 @@ class DatabaseService {
 	 * @return void
 	 */
 	public function update_db_check() {
-		if ( get_site_option( 'logpilot_db_version' ) !== '1.0.0' ) {
+		if ( get_site_option( 'logpilot_db_version' ) !== '1.1.0' ) {
 			$this->create_table();
-			update_site_option( 'logpilot_db_version', '1.0.0' );
+			update_site_option( 'logpilot_db_version', '1.1.0' );
 		}
 	}
 
@@ -63,13 +63,19 @@ class DatabaseService {
             message TEXT NOT NULL,
             file VARCHAR(255) NULL,
             line INT UNSIGNED NULL,
+            user_id BIGINT(20) UNSIGNED DEFAULT 0,
+            request_uri VARCHAR(255) NULL,
+            request_method VARCHAR(10) NULL,
+            user_agent TEXT NULL,
+            client_ip VARCHAR(45) NULL,
             occurrences INT UNSIGNED DEFAULT 1,
             last_occurred DATETIME DEFAULT CURRENT_TIMESTAMP,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             resolved TINYINT(1) DEFAULT 0,
             PRIMARY KEY(id),
             UNIQUE KEY error_hash (error_hash),
-            KEY type_idx (type)
+            KEY type_idx (type),
+            KEY user_id (user_id)
         ) $charset_collate;";
 
 		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );

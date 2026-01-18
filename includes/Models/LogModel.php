@@ -108,17 +108,22 @@ class LogModel {
 		$wpdb->insert(
 			$table,
 			array(
-				'error_hash'    => $data['error_hash'],
-				'type'          => sanitize_text_field( $data['type'] ),
-				'message'       => $data['message'], // Already encrypted string
-				'file'          => sanitize_text_field( $data['file'] ),
-				'line'          => intval( $data['line'] ),
-				'occurrences'   => 1,
-				'last_occurred' => current_time( 'mysql' ),
-				'created_at'    => current_time( 'mysql' ),
-				'resolved'      => 0,
+				'error_hash'     => $data['error_hash'],
+				'type'           => sanitize_text_field( $data['type'] ),
+				'message'        => $data['message'], // Already encrypted string
+				'file'           => sanitize_text_field( $data['file'] ),
+				'line'           => intval( $data['line'] ),
+				'user_id'        => intval( $data['user_id'] ?? 0 ),
+				'request_uri'    => sanitize_text_field( $data['request_uri'] ?? '' ),
+				'request_method' => sanitize_text_field( $data['request_method'] ?? '' ),
+				'user_agent'     => sanitize_text_field( $data['user_agent'] ?? '' ),
+				'client_ip'      => sanitize_text_field( $data['client_ip'] ?? '' ),
+				'occurrences'    => 1,
+				'last_occurred'  => current_time( 'mysql' ),
+				'created_at'     => current_time( 'mysql' ),
+				'resolved'       => 0,
 			),
-			array( '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%d' )
+			array( '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%d' )
 		);
 
 		return $wpdb->insert_id;

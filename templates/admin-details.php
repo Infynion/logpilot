@@ -53,5 +53,36 @@ $back_url = admin_url( 'admin.php?page=logpilot-logs&tab=logs' );
 				</tr>
 			</tbody>
 		</table>
+
+		<h3><?php esc_html_e( 'Context Data', 'logpilot' ); ?></h3>
+		<table class="form-table" role="presentation">
+			<tbody>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Request URI', 'logpilot' ); ?></th>
+					<td><code><?php echo esc_html( $log['request_method'] ?? 'GET' ); ?> <?php echo esc_html( $log['request_uri'] ?? '-' ); ?></code></td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User ID', 'logpilot' ); ?></th>
+					<td>
+						<?php 
+						if ( ! empty( $log['user_id'] ) ) {
+							$user = get_userdata( $log['user_id'] );
+							echo $user ? esc_html( $user->display_name ) . ' (ID: ' . intval( $log['user_id'] ) . ')' : intval( $log['user_id'] );
+						} else {
+							echo '-';
+						}
+						?>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Client IP', 'logpilot' ); ?></th>
+					<td><?php echo esc_html( $log['client_ip'] ?? '-' ); ?></td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Agent', 'logpilot' ); ?></th>
+					<td><code><?php echo esc_html( $log['user_agent'] ?? '-' ); ?></code></td>
+				</tr>
+			</tbody>
+		</table>
 	</div>
 </div>

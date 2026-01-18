@@ -66,13 +66,16 @@ class LoggerService {
 		// Encrypt message
 		$encrypted_message = Encryption::encrypt( $message );
 
-		$data = array(
+		// Contextual Intelligence
+		$context = $this->get_context();
+
+		$data = array_merge( array(
 			'error_hash' => $error_hash,
 			'type'       => $level,
 			'message'    => $encrypted_message,
 			'file'       => $file,
 			'line'       => $line,
-		);
+		), $context );
 
 		// Delegate DB operation to Model
 		$result = $this->log_model->upsert( $data );
@@ -86,5 +89,45 @@ class LoggerService {
 		if ( $send_email && $result['is_new'] ) {
 			do_action( 'infynion_log_written_new', $result['log_id'], $level );
 		}
+	}
+
+	/**
+	 * Capture request and user context.
+	 *
+	 * @return array
+	 */
+	private function get_context() {
+		$context = array(
+			'user_id'        => get_current_user_id(),
+			'request_uri'    => '',
+			'request_method' => '',
+			'user_agent'     => '',
+			'client_ip'      => '',
+		);
+
+		if ( isset( $_SERVER['REQUEST_URI'] ) ) {
+			$context['request_uri'] = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+		}
+
+		if ( isset( $_SERVER['REQUEST_METHOD'] ) ) {
+			$context['request_method'] = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) );
+		}
+
+		if ( isset( $_SERVER['HTTP_USER_AGENT'] ) ) {
+			// User agent can be long, cut to 255 if needed?? DB is TEXT so it's fine.
+			$context['user_agent'] = sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) );
+		}
+
+		// Simple IP check (behind proxies often uses X-Forwarded-For)
+		if ( ! empty( $_SERVER['HTTP_CLIENT_IP'] ) ) {
+			$ip = $_SERVER['HTTP_CLIENT_IP'];
+		} elseif ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+			$ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+		} else {
+			$ip = $_SERVER['REMOTE_ADDR'] ?? '';
+		}
+		$context['client_ip'] = sanitize_text_field( wp_unslash( $ip ) );
+
+		return $context;
 	}
 }

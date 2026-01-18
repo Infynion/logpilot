@@ -58,36 +58,42 @@ class LoggerService {
 			return;
 		}
 
-		// SRP: Logic for hash generation belongs in the Service, not the Model.
-		// We use md5 of raw data to ensure uniqueness.
-		$raw_message_str = is_scalar( $message ) ? (string) $message : wp_json_encode( $message );
-		$error_hash      = hash( 'sha256', "{$level}|{$raw_message_str}|{$file}|{$line}" );
+		try {
+			// SRP: Logic for hash generation belongs in the Service, not the Model.
+			// We use md5 of raw data to ensure uniqueness.
+			$raw_message_str = is_scalar( $message ) ? (string) $message : wp_json_encode( $message );
+			$error_hash      = hash( 'sha256', "{$level}|{$raw_message_str}|{$file}|{$line}" );
 
-		// Encrypt message
-		$encrypted_message = Encryption::encrypt( $message );
+			// Encrypt message
+			$encrypted_message = Encryption::encrypt( $message );
 
-		// Contextual Intelligence
-		$context = $this->get_context();
+			// Contextual Intelligence
+			$context = $this->get_context();
 
-		$data = array_merge( array(
-			'error_hash' => $error_hash,
-			'type'       => $level,
-			'message'    => $encrypted_message,
-			'file'       => $file,
-			'line'       => $line,
-		), $context );
+			$data = array_merge( array(
+				'error_hash' => $error_hash,
+				'type'       => $level,
+				'message'    => $encrypted_message,
+				'file'       => $file,
+				'line'       => $line,
+			), $context );
 
-		// Delegate DB operation to Model
-		$result = $this->log_model->upsert( $data );
-		
-		// SRP: Event triggering belongs in the Service layer, not the Data layer.
-		if ( $result['log_id'] ) {
-			do_action( 'infynion/log_saved', $result['log_id'], $result['is_new'], $data );
-		}
+			// Delegate DB operation to Model
+			$result = $this->log_model->upsert( $data );
+			
+			// SRP: Event triggering belongs in the Service layer, not the Data layer.
+			if ( $result['log_id'] ) {
+				do_action( 'infynion/log_saved', $result['log_id'], $result['is_new'], $data );
+			}
 
-		// Fire action for notification service
-		if ( $send_email && $result['is_new'] ) {
-			do_action( 'infynion_log_written_new', $result['log_id'], $level );
+			// Fire action for notification service
+			if ( $send_email && $result['is_new'] ) {
+				do_action( 'infynion_log_written_new', $result['log_id'], $level );
+			}
+		} catch ( \Throwable $e ) {
+			// Fail-Safe: If anything goes wrong (DB down, Encryption fail), we MUST NOT crash the site.
+			// Instead, we log to a physical fallback file.
+			$this->log_to_fallback_file( $message, $level, $file, $line, $e );
 		}
 	}
 
@@ -129,5 +135,34 @@ class LoggerService {
 		$context['client_ip'] = sanitize_text_field( wp_unslash( $ip ) );
 
 		return $context;
+	}
+
+	/**
+	 * Log to fallback file in case of critical logger failure.
+	 * 
+	 * @param mixed      $original_message Original error message.
+	 * @param string     $level            Error level.
+	 * @param string     $file             File.
+	 * @param int        $line             Line.
+	 * @param \Throwable $logger_exception The exception thrown by the logger itself.
+	 * @return void
+	 */
+	private function log_to_fallback_file( $original_message, $level, $file, $line, $logger_exception ) {
+		$upload_dir = wp_upload_dir();
+		$log_file   = $upload_dir['basedir'] . '/logpilot-emergency.log';
+		
+		$timestamp = date( 'Y-m-d H:i:s' );
+		$log_entry = sprintf(
+			"[%s] [LOGGER FAILURE] Level: %s | Message: %s | File: %s:%d | Reason: %s\n",
+			$timestamp,
+			$level,
+			is_scalar( $original_message ) ? $original_message : json_encode( $original_message ),
+			$file,
+			$line,
+			$logger_exception->getMessage()
+		);
+
+		// Silently attempt to write. If this fails, we really can't do anything else.
+		@error_log( $log_entry, 3, $log_file );
 	}
 }

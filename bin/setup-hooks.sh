@@ -40,6 +40,13 @@ if [ $? != 0 ]; then
     PASS=false
 fi
 
+echo "Running PHPUnit Tests..."
+./vendor/bin/phpunit
+if [ $? != 0 ]; then
+    echo "PHPUnit tests failed. Please fix them before committing."
+    PASS=false
+fi
+
 if ! $PASS; then
     echo "Commit aborted."
     exit 1

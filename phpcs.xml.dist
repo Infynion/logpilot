@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<ruleset name="Infynion Logpilot Ruleset">
+    <description>WordPress Coding Standards for Infynion Logpilot</description>
+
+    <file>./logpilot.php</file>
+    <file>./includes</file>
+
+    <exclude-pattern>/vendor/*</exclude-pattern>
+    <exclude-pattern>/node_modules/*</exclude-pattern>
+    <exclude-pattern>/tests/*</exclude-pattern>
+
+    <arg value="sp"/>
+    <arg name="basepath" value="./"/>
+    <arg name="colors"/>
+    <arg name="extensions" value="php"/>
+
+    <rule ref="WordPress-Core"/>
+    <rule ref="WordPress-Docs"/>
+    <rule ref="WordPress-Extra">
+        <exclude name="WordPress.NamingConventions.ValidHookName.UseUnderscores"/>
+        <exclude name="WordPress.Files.FileName"/>
+    </rule>
+
+    <config name="minimum_supported_wp_version" value="5.8"/>
+
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array">
+                <element value="logpilot"/>
+            </property>
+        </properties>
+    </rule>
+    
+    <rule ref="WordPress.DB.PreparedSQL.InterpolatedNotPrepared"><severity>0</severity></rule>
+    <rule ref="WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber"><severity>0</severity></rule>
+    <rule ref="WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare"><severity>0</severity></rule>
+    <rule ref="WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler"><severity>0</severity></rule>
+    <rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames.classFound"><severity>0</severity></rule>
+    <rule ref="Squiz.Commenting.InlineComment.InvalidEndChar"><severity>0</severity></rule>
+</ruleset>

@@ -97,6 +97,36 @@ class UI {
 				'default'           => 1,
 			)
 		);
+		register_setting(
+			'logpilot',
+			'logpilot_expire',
+			array(
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+				'default'           => 7,
+			)
+		);
+		register_setting(
+			'logpilot',
+			'logpilot_notify',
+			array(
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+				'default'           => 0,
+			)
+		);
+		register_setting(
+			'logpilot',
+			'logpilot_notify_emails',
+			array(
+				'type'              => 'string',
+				'sanitize_callback' => function ( $val ) {
+					$emails = array_map( 'sanitize_email', array_map( 'trim', explode( ',', $val ) ) );
+					return implode( ',', array_filter( $emails ) );
+				},
+				'default'           => '',
+			)
+		);
 	}
 
 	/**
@@ -141,6 +171,7 @@ class UI {
 	 * @return void
 	 */
 	private function render_config(): void {
+		$admin_email = get_option( 'admin_email' );
 		?>
 		<form method="post" action="options.php">
 			<?php settings_fields( 'logpilot' ); ?>
@@ -148,13 +179,47 @@ class UI {
 				<tr valign="top">
 					<th scope="row"><?php esc_html_e( 'Enable Logging', 'logpilot' ); ?></th>
 					<td>
-						<input type="checkbox" name="logpilot_enable" value="1" <?php checked( get_option( 'logpilot_enable', 1 ), 1 ); ?> />
+						<input type="checkbox" id="enable_error_log" name="logpilot_enable" value="1" <?php checked( get_option( 'logpilot_enable', 1 ), 1 ); ?> />
 						<p class="description"><?php esc_html_e( 'Toggle to enable error interception and logging globally.', 'logpilot' ); ?></p>
+					</td>
+				</tr>
+				<tr valign="top" class="error-log-settings">
+					<th scope="row"><?php esc_html_e( 'Error Log Expire Date (days)', 'logpilot' ); ?></th>
+					<td>
+						<input type="number" name="logpilot_expire" min="0" value="<?php echo esc_attr( get_option( 'logpilot_expire', 7 ) ); ?>" />
+						<p class="description"><?php esc_html_e( 'Enter 0 for no expiration. Default is 7 days.', 'logpilot' ); ?></p>
+					</td>
+				</tr>
+				<tr valign="top" class="error-log-settings">
+					<th scope="row"><?php esc_html_e( 'Notify by Email', 'logpilot' ); ?></th>
+					<td>
+						<input type="checkbox" id="error_log_notify" name="logpilot_notify" value="1" <?php checked( get_option( 'logpilot_notify', 0 ), 1 ); ?> />
+						<p class="description"><?php esc_html_e( 'Send email notification when a new error log is recorded.', 'logpilot' ); ?></p>
+					</td>
+				</tr>
+				<tr valign="top" class="error-log-email">
+					<th scope="row"><?php esc_html_e( 'Notification Emails', 'logpilot' ); ?></th>
+					<td>
+						<input type="text" name="logpilot_notify_emails" value="<?php echo esc_attr( get_option( 'logpilot_notify_emails', '' ) ); ?>" placeholder="comma-separated emails; default: <?php echo esc_attr( sanitize_email( (string) $admin_email ) ); ?>" style="width:100%;" />
+						<p class="description"><?php esc_html_e( 'Emails to notify when an error log is created.', 'logpilot' ); ?></p>
 					</td>
 				</tr>
 			</table>
 			<?php submit_button( __( 'Save Settings', 'logpilot' ) ); ?>
 		</form>
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				function toggleFields() {
+					const enableError = document.getElementById('enable_error_log').checked;
+					document.querySelectorAll('.error-log-settings').forEach(el => el.style.display = enableError ? 'table-row' : 'none');
+					const notifyError = document.getElementById('error_log_notify').checked;
+					document.querySelectorAll('.error-log-email').forEach(el => el.style.display = (enableError && notifyError) ? 'table-row' : 'none');
+				}
+				toggleFields();
+				document.getElementById('enable_error_log').addEventListener('change', toggleFields);
+				document.getElementById('error_log_notify').addEventListener('change', toggleFields);
+			});
+		</script>
 		<?php
 	}
 

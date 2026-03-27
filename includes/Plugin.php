@@ -53,6 +53,11 @@ class Plugin {
 		$logger   = new Logger( $database );
 		$logger->register_hooks();
 
+		add_action( 'logpilot_daily_cleanup', array( $database, 'delete_old_logs' ) );
+		if ( ! wp_next_scheduled( 'logpilot_daily_cleanup' ) ) {
+			wp_schedule_event( time(), 'daily', 'logpilot_daily_cleanup' );
+		}
+
 		if ( is_admin() ) {
 			$ui = new Admin\UI( $database, $logger );
 			$ui->register_hooks();

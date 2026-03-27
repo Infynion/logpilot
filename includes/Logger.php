@@ -221,6 +221,19 @@ class Logger {
 			'line'    => $data['line'] ?? 0,
 		);
 
-		$this->database->insert_or_increment( $payload );
+		$result = $this->database->insert_or_increment( $payload );
+
+		if ( ! empty( $result['is_new'] ) && get_option( 'logpilot_notify', 0 ) ) {
+			$emails = get_option( 'logpilot_notify_emails', '' );
+			if ( empty( $emails ) ) {
+				$emails = get_option( 'admin_email' );
+			}
+
+			if ( ! empty( $emails ) ) {
+				$subject = sprintf( '[%s] New Error: %s', get_bloginfo( 'name' ), $type );
+				$body    = sprintf( "A new error was logged in Logpilot.\n\nType: %s\nFile: %s\nLine: %s\nMessage:\n%s\n", $type, $payload['file'], $payload['line'], wp_json_encode( $data, JSON_PRETTY_PRINT ) );
+				wp_mail( $emails, $subject, $body );
+			}
+		}
 	}
 }

@@ -161,6 +161,31 @@ class Database {
 	}
 
 	/**
+	 * Deletes logs older than the configured expiration days.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return void
+	 */
+	public function delete_old_logs(): void {
+		global $wpdb;
+		$expire_days = get_option( 'logpilot_expire', 7 );
+		if ( empty( $expire_days ) ) {
+			return; // 0 means no expiration.
+		}
+
+		$table = $wpdb->prefix . $this->table_name;
+		$date  = gmdate( 'Y-m-d H:i:s', time() - ( $expire_days * DAY_IN_SECONDS ) );
+
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$table} WHERE last_occurred < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$date
+			)
+		);
+	}
+
+	/**
 	 * Delete multiple logs by ID.
 	 *
 	 * @since 1.0.0

@@ -44,6 +44,19 @@ function logpilot_init() {
 add_action( 'plugins_loaded', 'logpilot_init' );
 
 /**
+ * Deactivation Hook
+ *
+ * @since 1.0.0
+ * @return void
+ */
+register_deactivation_hook(
+	__FILE__,
+	function () {
+		wp_clear_scheduled_hook( 'logpilot_daily_cleanup' );
+	}
+);
+
+/**
  * Activation hook to install tables.
  *
  * @since 1.0.0

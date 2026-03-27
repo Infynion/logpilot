@@ -30,6 +30,8 @@ rsync -avz --exclude=".git" \
     --exclude="composer.lock" \
     --exclude="*.zip" \
     --exclude=".gitignore" \
+    --exclude=".phpunit.result.cache" \
+    --exclude="patchwork.json" \
     --exclude="$BUILD_DIR" \
     ./ "$TEMP_DIR/"
 

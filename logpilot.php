@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
 
+
 // Define plugin constants.
 define( 'LOGPILOT_VERSION', '1.0.1' );
 define( 'LOGPILOT_FILE', __FILE__ );

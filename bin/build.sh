@@ -43,6 +43,7 @@ rsync -avz --exclude=".git" \
     --exclude=".gitignore" \
     --exclude=".phpunit.result.cache" \
     --exclude="patchwork.json" \
+    --exclude=".DS_Store" \
     --exclude="$BUILD_DIR" \
     ./ "$TEMP_DIR/"
 

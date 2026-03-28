@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - main
-  push:
-    branches:
-      - main
 
 jobs:
   lint-and-test:
@@ -46,3 +43,149 @@ jobs:
 
       - name: Run PHPUnit Tests
         run: composer test
+
+  # -------------------------------------------------------------------
+  # Version consistency check — always runs on every PR to main.
+  # Ensures:
+  #   1. The version has been bumped and does not match an existing tag.
+  #   2. All version locations are in sync with the plugin header.
+  #   3. A readme.txt changelog entry exists for the new version.
+  # -------------------------------------------------------------------
+  version-check:
+    name: Version & Changelog Consistency
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history so git ls-remote can resolve all existing tags
+          fetch-depth: 0
+
+      - name: Check version consistency and changelog entry
+        run: |
+          set +e  # Collect all failures before exiting
+
+          ERRORS=()
+
+          # ---------------------------------------------------------------
+          # 1. Extract the canonical version from the plugin header and
+          #    resolve its actual line number dynamically.
+          # ---------------------------------------------------------------
+          HEADER_LINE=$(grep -nE '^\s*\*\s*Version:' logpilot.php | cut -d: -f1)
+          HEADER_VERSION=$(grep -E '^\s*\*\s*Version:' logpilot.php | awk '{print $3}')
+
+          if [ -z "$HEADER_VERSION" ]; then
+              echo "::error file=logpilot.php::Could not extract version from the plugin header. Ensure the header contains '* Version: x.x.x'."
+              exit 1
+          fi
+
+          echo "Plugin header version : $HEADER_VERSION (logpilot.php line $HEADER_LINE)"
+
+          # ---------------------------------------------------------------
+          # 2. Check: version does not already exist as a tag in the repo.
+          #    If it does, the developer forgot to bump it.
+          # ---------------------------------------------------------------
+          if git ls-remote --tags origin "refs/tags/v$HEADER_VERSION" | grep -q "refs/tags"; then
+              ERRORS+=("::error file=logpilot.php,line=$HEADER_LINE::Version '$HEADER_VERSION' already exists as a released tag (v$HEADER_VERSION). You must bump the version before merging this PR. Update all of the following locations:
+
+            logpilot.php  line $HEADER_LINE  →  * Version: <new-version>
+            logpilot.php  line $CONSTANT_LINE  →  define( 'LOGPILOT_VERSION', '<new-version>' );
+            readme.txt    →  Stable tag: <new-version>
+            readme.txt    →  Add a new changelog block under == Changelog ==")
+          else
+              echo "✔ Version $HEADER_VERSION has not been released yet. Good to go."
+          fi
+
+          # ---------------------------------------------------------------
+          # 3. Check: LOGPILOT_VERSION constant matches the header.
+          #    Resolve its actual line number dynamically.
+          # ---------------------------------------------------------------
+          CONSTANT_LINE=$(grep -nE "define\( 'LOGPILOT_VERSION'" logpilot.php | cut -d: -f1)
+          CONSTANT_VERSION=$(grep -E "define\( 'LOGPILOT_VERSION'" logpilot.php | grep -oE "'[0-9]+\.[0-9]+\.[0-9]+'" | tr -d "'")
+
+          if [ -z "$CONSTANT_VERSION" ]; then
+              ERRORS+=("::error file=logpilot.php::Could not find the LOGPILOT_VERSION constant. Ensure it is defined as: define( 'LOGPILOT_VERSION', 'x.x.x' );")
+          elif [ "$CONSTANT_VERSION" != "$HEADER_VERSION" ]; then
+              ERRORS+=("::error file=logpilot.php,line=$CONSTANT_LINE::LOGPILOT_VERSION constant ('$CONSTANT_VERSION') does not match the plugin header version ('$HEADER_VERSION'). Update line $CONSTANT_LINE to: define( 'LOGPILOT_VERSION', '$HEADER_VERSION' );")
+          else
+              echo "✔ LOGPILOT_VERSION constant matches header: $CONSTANT_VERSION (logpilot.php line $CONSTANT_LINE)"
+          fi
+
+          # ---------------------------------------------------------------
+          # 4. Check: readme.txt Stable tag matches the header.
+          #    Resolve its actual line number dynamically.
+          # ---------------------------------------------------------------
+          STABLE_TAG_LINE=$(grep -nE '^Stable tag:' readme.txt | cut -d: -f1)
+          STABLE_TAG=$(grep -E '^Stable tag:' readme.txt | awk '{print $3}')
+
+          if [ -z "$STABLE_TAG" ]; then
+              ERRORS+=("::error file=readme.txt::Could not find 'Stable tag:' in readme.txt. Ensure the header contains 'Stable tag: x.x.x'.")
+          elif [ "$STABLE_TAG" != "$HEADER_VERSION" ]; then
+              ERRORS+=("::error file=readme.txt,line=$STABLE_TAG_LINE::Stable tag in readme.txt ('$STABLE_TAG') does not match the plugin header version ('$HEADER_VERSION'). Update line $STABLE_TAG_LINE to: Stable tag: $HEADER_VERSION")
+          else
+              echo "✔ readme.txt Stable tag matches header: $STABLE_TAG (readme.txt line $STABLE_TAG_LINE)"
+          fi
+
+          # ---------------------------------------------------------------
+          # 5. Check: readme.txt has a changelog entry for this version.
+          #    Resolve the == Changelog == section line number dynamically.
+          # ---------------------------------------------------------------
+          CHANGELOG_SECTION_LINE=$(grep -nE '^== Changelog ==' readme.txt | cut -d: -f1)
+          CHANGELOG_ENTRY_LINE=$(grep -nE "^= $HEADER_VERSION =" readme.txt | cut -d: -f1)
+
+          if [ -z "$CHANGELOG_ENTRY_LINE" ]; then
+              if [ -n "$CHANGELOG_SECTION_LINE" ]; then
+                  ERRORS+=("::error file=readme.txt,line=$CHANGELOG_SECTION_LINE::No changelog entry found for version '$HEADER_VERSION'. Add a new block immediately after line $CHANGELOG_SECTION_LINE (== Changelog ==):
+
+            = $HEADER_VERSION =
+            * Describe your changes here.")
+              else
+                  ERRORS+=("::error file=readme.txt::No '== Changelog ==' section found in readme.txt. Add it along with an entry for version '$HEADER_VERSION':
+
+            == Changelog ==
+
+            = $HEADER_VERSION =
+            * Describe your changes here.")
+              fi
+          else
+              echo "✔ Changelog entry found for version $HEADER_VERSION (readme.txt line $CHANGELOG_ENTRY_LINE)"
+          fi
+
+          # ---------------------------------------------------------------
+          # 6. Report all collected errors and fail if any exist
+          # ---------------------------------------------------------------
+          if [ ${#ERRORS[@]} -gt 0 ]; then
+              echo ""
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "  ⚠ VERSION CONSISTENCY CHECK FAILED"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo ""
+              echo "  The following locations must all reflect a new, unreleased"
+              echo "  version before this PR can be merged:"
+              echo ""
+              echo "  logpilot.php"
+              echo "    Line $HEADER_LINE    →  * Version: $HEADER_VERSION"
+              echo "    Line $CONSTANT_LINE  →  define( 'LOGPILOT_VERSION', '$HEADER_VERSION' );"
+              echo ""
+              echo "  readme.txt"
+              echo "    Line $STABLE_TAG_LINE  →  Stable tag: $HEADER_VERSION"
+              echo "    Under == Changelog == (line $CHANGELOG_SECTION_LINE) → add a new block:"
+              echo ""
+              echo "    = $HEADER_VERSION ="
+              echo "    * Describe your changes here."
+              echo ""
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo ""
+
+              for ERROR in "${ERRORS[@]}"; do
+                  echo "$ERROR"
+              done
+
+              exit 1
+          fi
+
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  ✔ All version locations and changelog are consistent."
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

@@ -154,16 +154,24 @@ class LogListTable extends \WP_List_Table {
 
 		$this->process_bulk_action();
 
-		$table        = $wpdb->prefix . $this->database->table_name;
+		$table        = $wpdb->prefix . esc_sql( $this->database->table_name );
 		$current_page = $this->get_pagenum();
 		$offset       = ( $current_page - 1 ) * $this->per_page;
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is safe (esc_sql); live log counts must not be cached.
 		$total_items = (int) $wpdb->get_var( "SELECT COUNT(id) FROM {$table}" );
 
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// Table name uses esc_sql(); live paginated log data must not be served from cache.
 		$this->items = $wpdb->get_results(
-			$wpdb->prepare( "SELECT * FROM {$table} ORDER BY last_occurred DESC LIMIT %d OFFSET %d", $this->per_page, $offset ),
+			$wpdb->prepare(
+				"SELECT * FROM {$table} ORDER BY last_occurred DESC LIMIT %d OFFSET %d",
+				$this->per_page,
+				$offset
+			),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$this->_column_headers = array( $this->get_columns(), array(), $this->get_sortable_columns() );
 

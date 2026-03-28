@@ -29,10 +29,13 @@ Logpilot - Advanced Error & Activity Monitor by Infynion replaces standard scatt
 
 == Changelog ==
 
+<<<<<<< HEAD
 = 1.0.2 =
 * Fix syntax error to release.yml
 * Update release.yml to update changelog and versions accross all other necessary files
 
+=======
+>>>>>>> main
 = 1.0.1 =
 * Fix syntax error to release.yml
 * Update release.yml to update changelog and versions accross all other necessary files

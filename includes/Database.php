@@ -208,7 +208,6 @@ class Database {
 			"DELETE FROM {$table} WHERE id IN ($placeholders)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			...$ids
 		);
-
 		$wpdb->query( $query ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	}
 }

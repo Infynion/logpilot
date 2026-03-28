@@ -25,7 +25,7 @@ class Database {
 	 * @var string
 	 * @since 1.0.0
 	 */
-	public string $table_name = 'logpilot_errors';
+	public string $table_name = 'logpilot_logs';
 
 	/**
 	 * Creates the custom log table upon activation.
@@ -74,7 +74,7 @@ class Database {
 	public function insert_or_increment( array $error ): array {
 		global $wpdb;
 
-		$table   = $wpdb->prefix . $this->table_name;
+		$table   = $wpdb->prefix . esc_sql( $this->table_name );
 		$message = sanitize_text_field( $error['message'] );
 		$file    = sanitize_text_field( $error['file'] ?? '' );
 		$line    = absint( $error['line'] ?? 0 );
@@ -82,8 +82,10 @@ class Database {
 
 		$hash = hash( 'sha256', "{$type}|{$message}|{$file}|{$line}" );
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Real-time logging requires direct writes; caching would corrupt dedup logic.
 		$updated = $wpdb->query(
 			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is built from a safe, esc_sql()-encoded constant.
 				"UPDATE {$table} SET occurrences = occurrences + 1, last_occurred = %s, resolved = 0 WHERE error_hash = %s",
 				current_time( 'mysql' ),
 				$hash
@@ -91,6 +93,7 @@ class Database {
 		);
 
 		if ( ! $updated ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Required for atomic insert.
 			$result = $wpdb->insert(
 				$table,
 				array(
@@ -111,8 +114,13 @@ class Database {
 			);
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Lookup immediately after a write; no cache benefit.
 		$log_id = $wpdb->get_var(
-			$wpdb->prepare( "SELECT id FROM {$table} WHERE error_hash = %s LIMIT 1", $hash )
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is safe (esc_sql).
+				"SELECT id FROM {$table} WHERE error_hash = %s LIMIT 1",
+				$hash
+			)
 		);
 
 		return array(
@@ -131,8 +139,16 @@ class Database {
 	 */
 	public function get_log( int $id ) {
 		global $wpdb;
-		$table = $wpdb->prefix . $this->table_name;
-		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $id ), ARRAY_A );
+		$table = $wpdb->prefix . esc_sql( $this->table_name );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Single-row read by primary key; no benefit to caching transient log records.
+		return $wpdb->get_row(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is safe (esc_sql).
+				"SELECT * FROM {$table} WHERE id = %d",
+				$id
+			),
+			ARRAY_A
+		);
 	}
 
 	/**
@@ -150,16 +166,16 @@ class Database {
 			return;
 		}
 
-		$table        = $wpdb->prefix . $this->table_name;
+		$table        = $wpdb->prefix . esc_sql( $this->table_name );
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 
-		$query = $wpdb->prepare(
-			"UPDATE {$table} SET resolved = %d WHERE id IN ($placeholders)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$state,
-			...$ids
-		);
-
-		$wpdb->query( $query ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// Table name uses esc_sql(); $placeholders are integer-only %d tokens; $state and $ids are integer values.
+		$query = $wpdb->prepare( "UPDATE {$table} SET resolved = %d WHERE id IN ({$placeholders})", $state, ...$ids );
+		$wpdb->query( $query );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	}
 
 	/**
@@ -176,15 +192,14 @@ class Database {
 			return; // 0 means no expiration.
 		}
 
-		$table = $wpdb->prefix . $this->table_name;
+		$table = $wpdb->prefix . esc_sql( $this->table_name );
 		$date  = gmdate( 'Y-m-d H:i:s', time() - ( $expire_days * DAY_IN_SECONDS ) );
 
-		$wpdb->query(
-			$wpdb->prepare(
-				"DELETE FROM {$table} WHERE last_occurred < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				$date
-			)
-		);
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Scheduled cleanup; no read cache involved.
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name uses esc_sql(); safe to interpolate.
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE last_occurred < %s", $date ) );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	}
 
 	/**
@@ -201,14 +216,15 @@ class Database {
 			return;
 		}
 
-		$table        = $wpdb->prefix . $this->table_name;
+		$table        = $wpdb->prefix . esc_sql( $this->table_name );
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 
-		$query = $wpdb->prepare(
-			"DELETE FROM {$table} WHERE id IN ($placeholders)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			...$ids
-		);
-
-		$wpdb->query( $query ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// Table name uses esc_sql(); $placeholders are integer-only %d tokens; $ids are absint-safe integer IDs.
+		$query = $wpdb->prepare( "DELETE FROM {$table} WHERE id IN ({$placeholders})", ...$ids ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$wpdb->query( $query );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	}
 }

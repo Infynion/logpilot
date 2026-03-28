@@ -14,6 +14,16 @@ mkdir -p "$BUILD_DIR"
 # Ensure composer requires no dev dependencies
 composer install --no-dev --optimize-autoloader
 
+# Generate / update the translation template (.pot)
+echo "Generating language .pot file..."
+mkdir -p languages
+wp i18n make-pot . languages/logpilot.pot \
+    --slug="$PLUGIN_SLUG" \
+    --domain="logpilot" \
+    --exclude="vendor,tests,bin,build,node_modules" \
+    --allow-root 2>/dev/null || true
+echo "Language file: languages/logpilot.pot"
+
 # Create temp dir for zip
 TEMP_DIR="/tmp/${PLUGIN_SLUG}"
 rm -rf "$TEMP_DIR"
@@ -21,6 +31,7 @@ mkdir -p "$TEMP_DIR"
 
 # Copy files
 rsync -avz --exclude=".git" \
+    --exclude=".github" \
     --exclude="node_modules" \
     --exclude="tests" \
     --exclude="bin" \

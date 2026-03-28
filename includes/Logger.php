@@ -64,8 +64,10 @@ class Logger {
 	 * @return void
 	 */
 	public function register_error_handlers(): void {
+		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Intentional: this plugin's purpose is to intercept PHP errors.
 		set_error_handler( array( $this, 'handle_php_error' ) );
 		set_exception_handler( array( $this, 'handle_exception' ) );
+		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
 		register_shutdown_function( array( $this, 'handle_shutdown_fatal' ) );
 	}
 

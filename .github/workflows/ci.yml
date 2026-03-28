@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - main
-  push:
-    branches:
-      - main
 
 jobs:
   lint-and-test:
@@ -48,18 +45,22 @@ jobs:
         run: composer test
 
   # -------------------------------------------------------------------
-  # Version consistency check — runs only on pull requests to main.
-  # Ensures all version locations and the readme.txt changelog are
-  # manually updated before the PR is allowed to merge.
+  # Version consistency check — always runs on every PR to main.
+  # Ensures:
+  #   1. The version has been bumped and does not match an existing tag.
+  #   2. All version locations are in sync with the plugin header.
+  #   3. A readme.txt changelog entry exists for the new version.
   # -------------------------------------------------------------------
   version-check:
     name: Version & Changelog Consistency
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          # Fetch full history so git ls-remote can resolve all existing tags
+          fetch-depth: 0
 
       - name: Check version consistency and changelog entry
         run: |
@@ -82,7 +83,22 @@ jobs:
           echo "Plugin header version : $HEADER_VERSION (logpilot.php line $HEADER_LINE)"
 
           # ---------------------------------------------------------------
-          # 2. Check: LOGPILOT_VERSION constant matches the header.
+          # 2. Check: version does not already exist as a tag in the repo.
+          #    If it does, the developer forgot to bump it.
+          # ---------------------------------------------------------------
+          if git ls-remote --tags origin "refs/tags/v$HEADER_VERSION" | grep -q "refs/tags"; then
+              ERRORS+=("::error file=logpilot.php,line=$HEADER_LINE::Version '$HEADER_VERSION' already exists as a released tag (v$HEADER_VERSION). You must bump the version before merging this PR. Update all of the following locations:
+
+            logpilot.php  line $HEADER_LINE  →  * Version: <new-version>
+            logpilot.php  line $CONSTANT_LINE  →  define( 'LOGPILOT_VERSION', '<new-version>' );
+            readme.txt    →  Stable tag: <new-version>
+            readme.txt    →  Add a new changelog block under == Changelog ==")
+          else
+              echo "✔ Version $HEADER_VERSION has not been released yet. Good to go."
+          fi
+
+          # ---------------------------------------------------------------
+          # 3. Check: LOGPILOT_VERSION constant matches the header.
           #    Resolve its actual line number dynamically.
           # ---------------------------------------------------------------
           CONSTANT_LINE=$(grep -nE "define\( 'LOGPILOT_VERSION'" logpilot.php | cut -d: -f1)
@@ -97,7 +113,7 @@ jobs:
           fi
 
           # ---------------------------------------------------------------
-          # 3. Check: readme.txt Stable tag matches the header.
+          # 4. Check: readme.txt Stable tag matches the header.
           #    Resolve its actual line number dynamically.
           # ---------------------------------------------------------------
           STABLE_TAG_LINE=$(grep -nE '^Stable tag:' readme.txt | cut -d: -f1)
@@ -112,7 +128,7 @@ jobs:
           fi
 
           # ---------------------------------------------------------------
-          # 4. Check: readme.txt has a changelog entry for this version.
+          # 5. Check: readme.txt has a changelog entry for this version.
           #    Resolve the == Changelog == section line number dynamically.
           # ---------------------------------------------------------------
           CHANGELOG_SECTION_LINE=$(grep -nE '^== Changelog ==' readme.txt | cut -d: -f1)
@@ -137,7 +153,7 @@ jobs:
           fi
 
           # ---------------------------------------------------------------
-          # 5. Report all collected errors and fail if any exist
+          # 6. Report all collected errors and fail if any exist
           # ---------------------------------------------------------------
           if [ ${#ERRORS[@]} -gt 0 ]; then
               echo ""
@@ -145,8 +161,8 @@ jobs:
               echo "  ⚠ VERSION CONSISTENCY CHECK FAILED"
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo ""
-              echo "  The following locations must all reflect version '$HEADER_VERSION'"
-              echo "  before this PR can be merged:"
+              echo "  The following locations must all reflect a new, unreleased"
+              echo "  version before this PR can be merged:"
               echo ""
               echo "  logpilot.php"
               echo "    Line $HEADER_LINE    →  * Version: $HEADER_VERSION"

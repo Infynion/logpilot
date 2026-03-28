@@ -42,15 +42,36 @@ jobs:
               echo "Bumping version automatically to $NEXT_VERSION..."
               
               # Rewrite versions inside files
+              # logpilot.php L6  - Version: header
               sed -i "s/Version:     $CURRENT_VERSION/Version:     $NEXT_VERSION/g" logpilot.php
+              # logpilot.php L22 - LOGPILOT_VERSION constant
               sed -i "s/define( 'LOGPILOT_VERSION', '$CURRENT_VERSION' );/define( 'LOGPILOT_VERSION', '$NEXT_VERSION' );/g" logpilot.php
+              # readme.txt L6   - Stable tag header
               sed -i "s/Stable tag: $CURRENT_VERSION/Stable tag: $NEXT_VERSION/g" readme.txt
-              
+
+              # Extract commit messages since the last version tag
+              COMMIT_LOGS=$(git log "v$CURRENT_VERSION..HEAD" --no-merges --pretty=format:"* %s")
+              if [ -z "$COMMIT_LOGS" ]; then
+                COMMIT_LOGS="* Auto-bump version to $NEXT_VERSION"
+              fi
+
+              # Inject changelog entry into readme.txt using Python (avoids YAML-unsafe heredoc)
+              python3 - "$NEXT_VERSION" "$COMMIT_LOGS" <<'PYEOF'
+              import sys, pathlib
+              version, logs = sys.argv[1], sys.argv[2]
+              path = pathlib.Path("readme.txt")
+              content = path.read_text()
+              marker = "== Changelog =="
+              entry = f"\n= {version} =\n{logs}\n"
+              content = content.replace(marker, marker + entry, 1)
+              path.write_text(content)
+              PYEOF
+
               # Commit to main and skip hitting CI again
               git add logpilot.php readme.txt
               git commit -m "chore: auto-bump version to $NEXT_VERSION [skip ci]"
               git push origin HEAD
-              
+
               echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
           else
               echo "Tag v$CURRENT_VERSION does not exist yet. Bumping is not required."

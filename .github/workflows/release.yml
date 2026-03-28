@@ -57,13 +57,13 @@ jobs:
 
               # Inject changelog entry into readme.txt using Python
               # printf writes a single-line script to a temp file - no heredoc indentation issues
-              printf 'import sys, pathlib\nv, logs = sys.argv[1], sys.argv[2]\np = pathlib.Path("readme.txt")\nc = p.read_text()\nm = "== Changelog =="\ne = "\\n= " + v + " =\\n" + logs + "\\n"\np.write_text(c.replace(m, m + e, 1))\n' > _cl.py
+              printf 'import sys, pathlib\nv, logs = sys.argv[1], sys.argv[2]\np = pathlib.Path("readme.txt")\nc = p.read_text()\nm = "== Changelog =="\ne = "\\n\\n= " + v + " =\\n" + logs + "\\n"\np.write_text(c.replace(m, m + e, 1))' > _cl.py
               python3 _cl.py "$NEXT_VERSION" "$COMMIT_LOGS"
               rm _cl.py
 
               # Commit to main and skip hitting CI again
               git add logpilot.php readme.txt
-              git commit -m "chore: auto-bump version to $NEXT_VERSION [skip ci]"
+              git commit -m "auto-bump version to $NEXT_VERSION"
               git push origin HEAD
 
               echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"

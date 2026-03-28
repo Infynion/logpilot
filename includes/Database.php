@@ -25,7 +25,7 @@ class Database {
 	 * @var string
 	 * @since 1.0.0
 	 */
-	public string $table_name = 'logpilot_errors';
+	public string $table_name = 'logpilot_logs';
 
 	/**
 	 * Creates the custom log table upon activation.

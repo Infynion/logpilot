@@ -44,6 +44,25 @@ function logpilot_init() {
 add_action( 'plugins_loaded', 'logpilot_init' );
 
 /**
+ * Adds a "Dashboard" action link on the Plugins page.
+ *
+ * @since 1.0.0
+ *
+ * @param array $links Existing action links.
+ * @return array Modified action links with Dashboard prepended.
+ */
+function logpilot_action_links( $links ) {
+	$dashboard_link = sprintf(
+		'<a href="%s">%s</a>',
+		esc_url( admin_url( 'tools.php?page=logpilot' ) ),
+		esc_html__( 'Dashboard', 'logpilot' )
+	);
+	array_unshift( $links, $dashboard_link );
+	return $links;
+}
+add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'logpilot_action_links' );
+
+/**
  * Deactivation Hook
  *
  * @since 1.0.0

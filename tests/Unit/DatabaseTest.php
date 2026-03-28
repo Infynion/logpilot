@@ -29,7 +29,7 @@ class DatabaseTest extends TestCase {
 
 		Functions\expect( 'dbDelta' )->once()->with(
 			\Mockery::on( function($sql) {
-				return strpos( $sql, 'CREATE TABLE IF NOT EXISTS wp_logpilot_errors' ) !== false;
+				return strpos( $sql, 'CREATE TABLE IF NOT EXISTS wp_logpilot_logs' ) !== false;
 			})
 		);
 
@@ -90,7 +90,7 @@ class DatabaseTest extends TestCase {
 		global $wpdb;
 		$wpdb = \Mockery::mock();
 		$wpdb->prefix = 'wp_';
-		$wpdb->shouldReceive( 'prepare' )->once()->with( "SELECT * FROM wp_logpilot_errors WHERE id = %d", 5 )->andReturn( 'prepared sql' );
+		$wpdb->shouldReceive( 'prepare' )->once()->with( "SELECT * FROM wp_logpilot_logs WHERE id = %d", 5 )->andReturn( 'prepared sql' );
 		$wpdb->shouldReceive( 'get_row' )->once()->with( 'prepared sql', ARRAY_A )->andReturn( [ 'id' => 5, 'message' => 'test' ] );
 
 		$database = new Database();
@@ -103,7 +103,7 @@ class DatabaseTest extends TestCase {
 		global $wpdb;
 		$wpdb = \Mockery::mock();
 		$wpdb->prefix = 'wp_';
-		$wpdb->shouldReceive( 'prepare' )->once()->with( "UPDATE wp_logpilot_errors SET resolved = %d WHERE id IN (%d,%d)", 1, 4, 5 )->andReturn( 'prepared update sql' );
+		$wpdb->shouldReceive( 'prepare' )->once()->with( "UPDATE wp_logpilot_logs SET resolved = %d WHERE id IN (%d,%d)", 1, 4, 5 )->andReturn( 'prepared update sql' );
 		$wpdb->shouldReceive( 'query' )->once()->with( 'prepared update sql' )->andReturn( 2 );
 
 		$database = new Database();
@@ -124,7 +124,7 @@ class DatabaseTest extends TestCase {
 		global $wpdb;
 		$wpdb = \Mockery::mock();
 		$wpdb->prefix = 'wp_';
-		$wpdb->shouldReceive( 'prepare' )->once()->with( "DELETE FROM wp_logpilot_errors WHERE id IN (%d,%d)", 4, 5 )->andReturn( 'prepared delete sql' );
+		$wpdb->shouldReceive( 'prepare' )->once()->with( "DELETE FROM wp_logpilot_logs WHERE id IN (%d,%d)", 4, 5 )->andReturn( 'prepared delete sql' );
 		$wpdb->shouldReceive( 'query' )->once()->with( 'prepared delete sql' )->andReturn( 2 );
 
 		$database = new Database();
@@ -150,7 +150,7 @@ class DatabaseTest extends TestCase {
 		// Expect database query to run
 		$wpdb->shouldReceive( 'prepare' )->once()->with(
 			\Mockery::on( function($sql) { 
-				return strpos( $sql, 'DELETE FROM wp_logpilot_errors WHERE last_occurred < %s' ) !== false; 
+				return strpos( $sql, 'DELETE FROM wp_logpilot_logs WHERE last_occurred < %s' ) !== false; 
 			} ),
 			\Mockery::type('string')
 		)->andReturn( 'prepared delete old sql' );

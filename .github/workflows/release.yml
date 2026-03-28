@@ -55,17 +55,11 @@ jobs:
                 COMMIT_LOGS="* Auto-bump version to $NEXT_VERSION"
               fi
 
-              # Inject changelog entry into readme.txt using Python (avoids YAML-unsafe heredoc)
-              python3 - "$NEXT_VERSION" "$COMMIT_LOGS" <<'PYEOF'
-              import sys, pathlib
-              version, logs = sys.argv[1], sys.argv[2]
-              path = pathlib.Path("readme.txt")
-              content = path.read_text()
-              marker = "== Changelog =="
-              entry = f"\n= {version} =\n{logs}\n"
-              content = content.replace(marker, marker + entry, 1)
-              path.write_text(content)
-              PYEOF
+              # Inject changelog entry into readme.txt using Python
+              # printf writes a single-line script to a temp file - no heredoc indentation issues
+              printf 'import sys, pathlib\nv, logs = sys.argv[1], sys.argv[2]\np = pathlib.Path("readme.txt")\nc = p.read_text()\nm = "== Changelog =="\ne = "\\n= " + v + " =\\n" + logs + "\\n"\np.write_text(c.replace(m, m + e, 1))\n' > _cl.py
+              python3 _cl.py "$NEXT_VERSION" "$COMMIT_LOGS"
+              rm _cl.py
 
               # Commit to main and skip hitting CI again
               git add logpilot.php readme.txt

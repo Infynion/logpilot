@@ -3,7 +3,7 @@ Contributors: infynion, mhshujon, monircoderex
 Tags: logging, error log, monitor, logpilot, debug
 Requires at least: 5.8
 Tested up to: 6.4
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -28,6 +28,10 @@ Logpilot - Advanced Error & Activity Monitor by Infynion replaces standard scatt
 3. Configure the settings under **Tools > Logpilot**.
 
 == Changelog ==
+
+= 1.0.2 =
+* Fix syntax error to release.yml
+* Update release.yml to update changelog and versions accross all other necessary files
 
 = 1.0.1 =
 * Fix syntax error to release.yml

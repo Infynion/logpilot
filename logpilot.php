@@ -3,7 +3,7 @@
  * Plugin Name: Logpilot - Advanced System Logger & Error Monitor
  * Plugin URI:  https://github.com/Infynion/logpilot
  * Description: A secure, high-performance logpilot and error monitor that captures exceptions, PHP errors, database issues, and API failures.
- * Version:     1.0.1
+ * Version:     1.0.2
  * Author:      Infynion
  * Author URI:  https://github.com/Infynion/logpilot
  * License:     GPL-2.0+
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 
 // Define plugin constants.
-define( 'LOGPILOT_VERSION', '1.0.1' );
+define( 'LOGPILOT_VERSION', '1.0.2' );
 define( 'LOGPILOT_FILE', __FILE__ );
 define( 'LOGPILOT_PATH', plugin_dir_path( LOGPILOT_FILE ) );
 define( 'LOGPILOT_URL', plugin_dir_url( LOGPILOT_FILE ) );

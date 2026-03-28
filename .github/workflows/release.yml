@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - master
 
 jobs:
   release:
@@ -13,70 +12,32 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # Fetch full history so we can detect existing tags globally
           fetch-depth: 0
-          # Use a Personal Access Token (PAT) so the bot can bypass branch protection internally
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
-      - name: Configure Git User
+      - name: Read Version from Plugin Header
+        id: read_version
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+          VERSION=$(grep -E '^\s*\*\s*Version:' "logpilot.php" | awk '{print $3}')
 
-      - name: Determine Version and Auto-Bump
-        id: version_bump
-        run: |
-          # Extract current version from plugin header
-          CURRENT_VERSION=$(grep -E '^\s*\*\s*Version:' "logpilot.php" | awk '{print $3}')
-          echo "Detected version in logpilot.php: $CURRENT_VERSION"
-          
-          # Check if remote already contains the tag
-          if git ls-remote --tags origin "refs/tags/v$CURRENT_VERSION" | grep -q "refs/tags"; then
-              echo "Tag v$CURRENT_VERSION already exists. Calculating next patch version..."
-              
-              # Extract major, minor, patch components
-              IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
-              NEXT_PATCH=$((patch + 1))
-              NEXT_VERSION="$major.$minor.$NEXT_PATCH"
-              
-              echo "Bumping version automatically to $NEXT_VERSION..."
-              
-              # Rewrite versions inside files
-              # logpilot.php L6  - Version: header
-              sed -i "s/Version:     $CURRENT_VERSION/Version:     $NEXT_VERSION/g" logpilot.php
-              # logpilot.php L22 - LOGPILOT_VERSION constant
-              sed -i "s/define( 'LOGPILOT_VERSION', '$CURRENT_VERSION' );/define( 'LOGPILOT_VERSION', '$NEXT_VERSION' );/g" logpilot.php
-              # readme.txt L6   - Stable tag header
-              sed -i "s/Stable tag: $CURRENT_VERSION/Stable tag: $NEXT_VERSION/g" readme.txt
-
-              # Extract commit messages since the last version tag
-              COMMIT_LOGS=$(git log "v$CURRENT_VERSION..HEAD" --no-merges --pretty=format:"* %s")
-              if [ -z "$COMMIT_LOGS" ]; then
-                COMMIT_LOGS="* Auto-bump version to $NEXT_VERSION"
-              fi
-
-              # Inject changelog entry into readme.txt using Python
-              # printf writes a single-line script to a temp file - no heredoc indentation issues
-              printf 'import sys, pathlib\nv, logs = sys.argv[1], sys.argv[2]\np = pathlib.Path("readme.txt")\nc = p.read_text()\nm = "== Changelog =="\ne = "\\n\\n= " + v + " =\\n" + logs + "\\n"\np.write_text(c.replace(m, m + e, 1))' > _cl.py
-              python3 _cl.py "$NEXT_VERSION" "$COMMIT_LOGS"
-              rm _cl.py
-
-              # Commit to main and skip hitting CI again
-              git add logpilot.php readme.txt
-              git commit -m "auto-bump version to $NEXT_VERSION"
-              git push origin HEAD
-
-              echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
-          else
-              echo "Tag v$CURRENT_VERSION does not exist yet. Bumping is not required."
-              echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          if [ -z "$VERSION" ]; then
+            echo "::error file=logpilot.php::Could not extract version from the plugin header."
+            exit 1
           fi
+
+          echo "Detected version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version_bump.outputs.version }}
+          VERSION: ${{ steps.read_version.outputs.version }}
         run: |
+          if git ls-remote --tags origin "refs/tags/v$VERSION" | grep -q "refs/tags"; then
+            echo "Tag v$VERSION already exists. Skipping release."
+            exit 0
+          fi
+
           echo "Publishing release for v$VERSION..."
           gh release create "v$VERSION" \
             --title "v$VERSION" \

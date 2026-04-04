@@ -28,6 +28,22 @@ class Database {
 	public string $table_name = 'logpilot_logs';
 
 	/**
+	 * Table name for storing AI fix suggestions.
+	 *
+	 * @var string
+	 * @since 1.1.0
+	 */
+	public string $suggestions_table = 'logpilot_ai_suggestions';
+
+	/**
+	 * Table name for storing file backups before applying fixes.
+	 *
+	 * @var string
+	 * @since 1.1.0
+	 */
+	public string $backups_table = 'logpilot_file_backups';
+
+	/**
 	 * Creates the custom log table upon activation.
 	 *
 	 * @since 1.0.0
@@ -55,6 +71,38 @@ class Database {
             PRIMARY KEY  (id),
             UNIQUE KEY error_hash (error_hash),
             KEY type_idx (type)
+        ) $charset;";
+
+		$suggestions_table = $wpdb->prefix . esc_sql( 'logpilot_ai_suggestions' );
+		$backups_table     = $wpdb->prefix . esc_sql( 'logpilot_file_backups' );
+
+		$sql .= "CREATE TABLE IF NOT EXISTS {$suggestions_table} (
+            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            log_id BIGINT(20) UNSIGNED NOT NULL,
+            prompt_hash CHAR(64) NOT NULL,
+            severity VARCHAR(20) NOT NULL DEFAULT 'medium',
+            explanation LONGTEXT NOT NULL,
+            suggested_code LONGTEXT NOT NULL,
+            target_file VARCHAR(255) NOT NULL DEFAULT '',
+            is_core_file TINYINT(1) NOT NULL DEFAULT 0,
+            status VARCHAR(20) NOT NULL DEFAULT 'ready',
+            recovery_token CHAR(64) NULL DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY log_id_idx (log_id),
+            KEY status_idx (status)
+        ) $charset;";
+
+		$sql .= "CREATE TABLE IF NOT EXISTS {$backups_table} (
+            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            suggestion_id BIGINT(20) UNSIGNED NOT NULL,
+            file_path VARCHAR(255) NOT NULL,
+            file_hash_before CHAR(64) NOT NULL,
+            original_content LONGBLOB NOT NULL,
+            backed_up_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY suggestion_file (suggestion_id, file_path),
+            KEY suggestion_id_idx (suggestion_id)
         ) $charset;";
 
 		if ( ! function_exists( 'dbDelta' ) ) {
@@ -226,5 +274,148 @@ class Database {
 		$wpdb->query( $query );
 		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	}
+
+	// -------------------------------------------------------------------------
+	// AI Suggestions
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Insert a new AI suggestion record.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param array $data Associative array of column => value pairs.
+	 * @return int|false The insert_id on success, false on failure.
+	 */
+	public function insert_suggestion( array $data ): int|false {
+		global $wpdb;
+		$table = $wpdb->prefix . esc_sql( $this->suggestions_table );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Insert of new suggestion row.
+		$result = $wpdb->insert( $table, $data );
+		return $result ? (int) $wpdb->insert_id : false;
+	}
+
+	/**
+	 * Retrieve a single AI suggestion by ID.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param int $id The suggestion ID.
+	 * @return array|null The suggestion row as ARRAY_A, or null if not found.
+	 */
+	public function get_suggestion( int $id ): ?array {
+		global $wpdb;
+		$table = $wpdb->prefix . esc_sql( $this->suggestions_table );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $wpdb->get_row(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT * FROM {$table} WHERE id = %d",
+				$id
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Look up an existing suggestion for a log/prompt combination.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param int    $log_id      The log entry ID.
+	 * @param string $prompt_hash SHA-256 hash of the prompt context.
+	 * @return array|null The suggestion row as ARRAY_A, or null if not found.
+	 */
+	public function get_suggestion_for_log( int $log_id, string $prompt_hash ): ?array {
+		global $wpdb;
+		$table = $wpdb->prefix . esc_sql( $this->suggestions_table );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $wpdb->get_row(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT * FROM {$table} WHERE log_id = %d AND prompt_hash = %s ORDER BY created_at DESC LIMIT 1",
+				$log_id,
+				$prompt_hash
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Update the status of an AI suggestion.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param int    $id     The suggestion ID.
+	 * @param string $status The new status value.
+	 * @return void
+	 */
+	public function update_suggestion_status( int $id, string $status ): void {
+		global $wpdb;
+		$table = $wpdb->prefix . esc_sql( $this->suggestions_table );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->update( $table, array( 'status' => sanitize_text_field( $status ) ), array( 'id' => $id ) );
+	}
+
+	/**
+	 * Retrieve all suggestions in 'applied_pending' status whose watchdog transient has expired.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return array Array of suggestion rows as ARRAY_A.
+	 */
+	public function get_pending_watchdog_suggestions(): array {
+		global $wpdb;
+		$table = $wpdb->prefix . esc_sql( $this->suggestions_table );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			"SELECT * FROM {$table} WHERE status = 'applied_pending'",
+			ARRAY_A
+		);
+		return $rows ?: array();
+	}
+
+	// -------------------------------------------------------------------------
+	// File Backups
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Insert a file backup record before applying a fix.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param array $data Associative array of column => value pairs.
+	 * @return int|false The insert_id on success, false on failure.
+	 */
+	public function insert_backup( array $data ): int|false {
+		global $wpdb;
+		$table = $wpdb->prefix . esc_sql( $this->backups_table );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Insert of new backup row.
+		$result = $wpdb->insert( $table, $data );
+		return $result ? (int) $wpdb->insert_id : false;
+	}
+
+	/**
+	 * Retrieve the backup row for a given suggestion ID.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param int $suggestion_id The suggestion ID.
+	 * @return array|null The backup row as ARRAY_A, or null if not found.
+	 */
+	public function get_backup_for_suggestion( int $suggestion_id ): ?array {
+		global $wpdb;
+		$table = $wpdb->prefix . esc_sql( $this->backups_table );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $wpdb->get_row(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT * FROM {$table} WHERE suggestion_id = %d ORDER BY backed_up_at DESC LIMIT 1",
+				$suggestion_id
+			),
+			ARRAY_A
+		);
 	}
 }
